@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE struts PUBLIC
+    "-//Apache Software Foundation//DTD Struts Configuration 2.3//EN"
+    "http://struts.apache.org/dtds/struts-2.3.dtd">
+
+<struts>
+	<package name="innomanager_do/Frontend/WorkLayer" namespace="/do/Frontend/WorkLayer" extends="entando-front-default">	
+        <global-results>
+            <result name="userNotAllowed" type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/userNotAllowed.jsp</result>
+            <result name="failure" type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/error.jsp</result>
+        </global-results>       
+
+    	<!-- #### WORK LAYER ENTRY POINT **** -->
+        
+        <action name="entryEditAction" class="WorkLayerAction" method="entryEditAction">
+            <result name="edit" type="chain">edit</result>
+            <result name="editNew" type="chain">editNew</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="entandoFrontEndFreeStack" />
+        </action>
+        
+        <!-- #### WORK LAYER ACTION **** -->
+        
+        <action name="edit" class="WorkLayerAction" method="edit">
+            <result type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/edit.jsp</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="entandoFrontEndFreeStack" >
+                  <param name="chain.includeParameters">contentOnSessionMarker</param>
+	    </interceptor-ref>
+        </action>
+	
+        <action name="editNew" class="WorkLayerAction" method="editNew">
+            <result type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/edit.jsp</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="entandoFrontEndFreeStack" >
+                  <param name="chain.includeParameters">contentOnSessionMarker</param>
+	    </interceptor-ref>
+        </action>
+	
+        <action name="save" class="WorkLayerAction" method="save">
+            <result type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/saved.jsp</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="entandoFrontEndFreeStack" >
+                  <param name="chain.includeParameters">contentOnSessionMarker</param>
+	    </interceptor-ref>
+        </action>
+        
+        <action name="entryElaborateAction" class="WorkLayerAction" method="entryElaborateAction">
+            <result name="start" type="chain">start</result>
+            <result name="import" type="chain">import</result>
+            <result name="elaborate" type="chain">elaborate</result>
+            <result name="export" type="chain">export</result>
+            <result name="deleteConfirm" type="chain">deleteConfirm</result>
+            <result name="delete" type="chain">delete</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="entandoFrontEndFreeStack" >
+                  <param name="chain.includeParameters">contentOnSessionMarker</param>
+	    </interceptor-ref>
+        </action>
+        
+        <action name="start" class="WorkLayerAction" >
+            <result  type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/elaborate.jsp</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="entandoFrontEndFreeStack" >
+                  <param name="chain.includeParameters">contentOnSessionMarker</param>
+	    </interceptor-ref>
+        </action>
+         
+        <action name="upload" class="WorkLayerAction" method="upload">
+            <result  type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/elaborate.jsp</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="apsFileUpload" />
+            <interceptor-ref name="entandoFrontEndFreeStack" >
+                  <param name="chain.includeParameters">contentOnSessionMarker</param>
+	    </interceptor-ref>
+        </action>
+        
+        <action name="import" class="WorkLayerAction" method="importToDb">
+            <result type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/elaborate.jsp</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="entandoFrontEndFreeStack" >
+                  <param name="chain.includeParameters">contentOnSessionMarker</param>
+	    </interceptor-ref>
+        </action>
+        
+        <action name="elaborate" class="WorkLayerAction" method="elaborate" >
+            <result type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/elaborate.jsp</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="entandoFrontEndFreeStack" >
+                  <param name="chain.includeParameters">contentOnSessionMarker</param>
+	    </interceptor-ref>
+         </action>
+         
+         <action name="export" class="WorkLayerAction" method="export" >
+            <result type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/elaborate.jsp</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="entandoFrontEndFreeStack" >
+                  <param name="chain.includeParameters">contentOnSessionMarker</param>
+	    </interceptor-ref>
+         </action> 
+         
+         <action name="deleteConfirm" class="WorkLayerAction" >
+            <result  type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/delete.jsp</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="entandoFrontEndFreeStack" >
+                  <param name="chain.includeParameters">contentOnSessionMarker</param>
+	    </interceptor-ref>
+         </action>
+         
+         <action name="delete" class="WorkLayerAction" method="delete" >
+            <result  type="dispatcher">/WEB-INF/innomanager/aps/jsp/internalServlet/worklayer/deleted.jsp</result>
+            <interceptor-ref name="requestAuth"><param name="requiredPermission">innousers</param></interceptor-ref>
+            <interceptor-ref name="entandoFrontEndFreeStack" >
+                  <param name="chain.includeParameters">contentOnSessionMarker</param>
+	    </interceptor-ref>
+         </action>
+               
+    </package> 
+</struts>
+
+
+

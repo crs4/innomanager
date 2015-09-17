@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Context path="/innomanager" docBase="./innomanager" debug="1" reloadable="false">
+	
+	<Environment name="logName" value="innomanager" type="java.lang.String" override="false" />
+	<Environment name="logFilePrefix" value="/var/lib/tomcat7/logs/innomanager_log" type="java.lang.String" override="false" />
+	<Environment name="logLevel" value="DEBUG" type="java.lang.String" override="false" />
+	<Environment name="logFileSize" value="200000" type="java.lang.String" override="false" />
+	<Environment name="logFilesCount" value="10" type="java.lang.String" override="false" />
+	
+	<Environment name="configVersion" value="production" type="java.lang.String" override="false" />
+	
+	<Environment name="applicationBaseURL" value="http://rtourrenia.crs4.it:8080/innomanager/" type="java.lang.String" override="false" />
+	<Environment name="resourceRootURL" value="/innomanager/resources/" type="java.lang.String" override="false" />
+	<Environment name="protectedResourceRootURL" value="/innomanager/protected/" type="java.lang.String" override="false" />
+	
+	<Environment name="resourceDiskRootFolder" value="/var/lib/tomcat7/webapps/innomanager/resources" type="java.lang.String" override="false" />
+	<Environment name="protectedResourceDiskRootFolder" value="/var/lib/tomcat7/webapps/innomanager/protected" type="java.lang.String" override="false" />
+	
+	<Environment name="indexDiskRootFolder" value="/var/lib/tomcat7/webapps/innomanager/indexdir" type="java.lang.String" override="false" />
+	
+<Resource name="jdbc/portDataSource" auth="Container" 
+                type="javax.sql.DataSource" driverClassName="org.postgresql.Driver" 
+                testWhileIdle="true"
+                testOnBorrow="true"
+                testOnReturn="false"
+                validationQuery="SELECT 1"
+                validationInterval="30000"
+                timeBetweenEvictionRunsMillis="5000"
+                maxActive="100"
+                minIdle="10"
+                maxWait="10000"
+                initialSize="10"
+                removeAbandonedTimeout="60"
+                removeAbandoned="true"
+                logAbandoned="true"
+                minEvictableIdleTimeMillis="30000"
+                jmxEnabled="true"
+                jdbcInterceptors="org.apache.tomcat.jdbc.pool.interceptor.ConnectionState;
+                 org.apache.tomcat.jdbc.pool.interceptor.StatementFinalizer;
+                 org.apache.tomcat.jdbc.pool.interceptor.SlowQueryReportJmx(threshold=10000)"
+                username="roberto" password="qw123e567" 
+		url="jdbc:postgresql://localhost:5432/innomanagerPort" />
+
+        <Resource name="jdbc/servDataSource" auth="Container" 
+                type="javax.sql.DataSource" driverClassName="org.postgresql.Driver" 
+                testWhileIdle="true"
+                testOnBorrow="true"
+                testOnReturn="false"
+                validationQuery="SELECT 1"
+                validationInterval="30000"
+                timeBetweenEvictionRunsMillis="5000"
+                maxActive="100"
+                minIdle="10"
+                maxWait="10000"
+                initialSize="10"
+                removeAbandonedTimeout="60"
+                removeAbandoned="true"
+                logAbandoned="true"
+                minEvictableIdleTimeMillis="30000"
+                jmxEnabled="true"
+                jdbcInterceptors="org.apache.tomcat.jdbc.pool.interceptor.ConnectionState;
+                 org.apache.tomcat.jdbc.pool.interceptor.StatementFinalizer;
+                 org.apache.tomcat.jdbc.pool.interceptor.SlowQueryReportJmx(threshold=10000)"
+                username="roberto" password="qw123e567" 
+		url="jdbc:postgresql://localhost:5432/innomanagerServ" />
+	
+</Context>

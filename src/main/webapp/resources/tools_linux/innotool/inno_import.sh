@@ -1,0 +1,265 @@
+#!/bin/bash
+#
+# inno_import_shapefiles
+# 
+# Description: import shapefile data into couchbase
+# Descrizione: carica i dati di uno shapefile su di un nodo couchbase
+# 
+# Written by Roberto Demontis <demontis@crs4.it>.
+### BEGIN INIT INFO
+# depends on: postgresql (v:9.3), postgis, gzip, tar,  zip, unzip, bash, couchbase 
+# 
+# usage: path_to/innotool/inno_import.sh new_layer_name path_to_compressed_shapefile
+# parameters: 
+# - new_layer_name : The name of the new layer
+# - path_to_compressed_shapefile : The compressed shapefile 
+# 
+##############    
+# dipende da: postgresql (v:9.3), postgis, gzip, tar,  zip, unzip, bash, couchbase
+#
+# uso: path_to/innotool/inno_import.sh new_layer_name path_to_compressed_shapefile
+# parametri: 
+# - new_layer_name : il nome del nuovo layer da caricare su couchbase
+# - path_to_compressed_shapefile : lo shapefile compresso dei dati       
+#   
+#     
+### END INIT INFO
+
+# READ GENERAL PARAMETERS 
+source ./inno_set_global.sh
+
+echo PARAMETERS:
+echo Database di supporto [Postgresql]         : $LOCAL_POSTGRES_DB
+echo Nome utente amministratore couchbase      : $ADMIN
+echo Password utente amministratore couchbase  : $ADMIN_PASSWD
+echo Indirizzo del nodo del cluster couchbase  : $NODE_ADDR
+
+if [ "$1" = "" -o "$2” = "" ]; then
+     echo "Usage: inno_import.sh new_layer_name path_to_compressed_shapefile"
+     echo "new_layer_name : The name of the new layer;” 
+     echo "path_to_compressed_shapefile: path to the compressed shapefile. The file should be composed by the files .shp, .dbf, .shx with the same name of the compressed file;” 
+     exit 1
+fi
+
+NAME=$1
+FILE=$2
+
+NAME=`echo ${NAME##/*/} | sed 's/ //'`
+
+if [ "$NAME" = "" ]; 
+then
+     echo "Error: WRONG NAME!!"
+     exit 1
+fi
+
+
+if [ ! -e "$FILE" ]; 
+then
+     echo "Error: $FILE not found"
+     exit 1
+fi
+
+if [ ! "${FILE: -7}" = ".tar.gz" -a ! "${FILE: -4}" = ".zip" ]; 
+then
+     echo "Error: $FILE is not a .tar.gz or .zip file"
+     exit 1
+fi
+
+if [ -e "/tmp/${NAME}” ]; then
+    rm -fr /tmp/${NAME}   
+fi
+
+
+# It creates the tmp work area 
+# Crea l’area di lavoro
+
+mkdir /tmp/$NAME
+chmod 777  /tmp/$NAME
+cd /tmp/$NAME
+
+# It uncompress and untar the data
+# Decompressione dei file dei dati 
+
+if [ "${FILE: -7}" = ".tar.gz" ]; then
+   NAMEFILE=`echo ${FILE##/*/} | sed 's/.tar.gz//'`
+   cp $FILE /tmp/$NAME/${NAME}.tar.gz
+   gzip -d *.tar.gz
+   tar -xvf *.tar
+else if [ "${FILE: -4}" = ".zip" ]; then
+   NAMEFILE=`echo ${FILE##/*/} | sed 's/.zip//'`
+   cp $FILE /tmp/$NAME/${NAME}.zip
+   unzip  ${NAME}.zip
+fi
+fi
+
+# It verifies the presence of all files with correct name and extension
+# Decompressione dei file dei dati e verifica di nome ed estensione 
+
+if [ ! -e "/tmp/$NAME/$NAMEFILE”.shp ]; then
+	echo "Error: shapefile $NAME.shp not found"     
+	exit 1
+fi
+if [ ! -e "/tmp/$NAME/$NAMEFILE”.shx ]; then
+	echo "Error: shapefile $NAME.shx not found"
+	exit 1
+fi
+if [ ! -e "/tmp/$NAME/$NAMEFILE”.dbf ]; then
+	echo "Error: shapefile $NAME.dbf not found"
+	exit 1
+fi
+
+# It creates a schema for the data in the local database 
+# Crea uno schema per i dati nel database locale
+
+if [ "${NAME}" = "public" ]; then
+     NAME="_public";
+fi  
+  
+psql -d $LOCAL_POSTGRES_DB -c "DROP SCHEMA IF EXISTS $CORRECTNAME CASCADE"
+VERIFICA=`echo  "CREATE SCHEMA $CORRECTNAME" | psql -d $LOCAL_POSTGRES_DB`
+
+if [ ! "$VERIFICA" = "CREATE SCHEMA" ]; then
+     echo "Error: SCHEMA $NAME already exist or not deleted or system error"
+     exit 1
+fi
+
+# It inserts the data into a table with the same name of the schema
+# Carica i dati in una tabella con lo stesso nome dello schema 
+shp2pgsql -s 4326  /tmp/$NAME/$NAME.shp "$NAME"."$NAME" | psql -d $LOCAL_POSTGRES_DB -q
+VERIFICA=`echo  "SELECT count(*) || ' elements ' FROM $NAME.$NAME " | psql -d $LOCAL_POSTGRES_DB -t`
+echo FIRST STEP SUCCESS, $VERIFICA WROTE IN $NAME.$NAME TABLE OF DATABASE  $LOCAL_POSTGRES_DB
+
+# It creates the table of the ordered data based on geometrical property 
+# Crea la tabella con i dati ordinati a secondo delle proprieta' geometriche
+psql -d $LOCAL_POSTGRES_DB -q -c "SELECT _inno_prepare_layer ('$NAME');"
+
+mkdir /tmp/$NAME/infos
+chmod 777  /tmp/$NAME/infos
+mkdir /tmp/$NAME/infos/docs
+chmod 777  /tmp/$NAME/infos/docs
+
+# It generates and write the json document with non geometrical attributes and 
+# bounding box 
+# Genera e scrive i documenti json con le informazioni alfanumeriche e bounding box
+psql -d $LOCAL_POSTGRES_DB -q -c "SELECT _inno_info_writer ('$NAME' , '/tmp');"
+
+# It generates the json document to manage the spatial query with no element
+# Genera i documenti json per la gestione delle query spaziali senza risultato
+DOC='{ "id": "'$NAME':false","page": 1,"pages": 1,';
+for ZOOM in 9 10 11 12 13 14 15 16 17 
+do
+if [ ! $ZOOM = 9 ]; then
+    DOC=$DOC','
+fi
+    DOC=$DOC'"_'$NAME'macro'$ZOOM'bbox_": {"type": "Polygon","coordinates": [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,90]]]}'
+done;
+DOC=$DOC','
+DOC=$DOC'"_'$NAME'bbox_": {"type": "Polygon","coordinates": [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,90]]]}'
+DOC=$DOC'}';
+echo $DOC > /tmp/$NAME/infos/docs/$NAME":false" 
+
+cd /tmp/$NAME
+
+# It compresses the json documents with non geometrical attributes and the bounding box 
+# Genera i documenti json per la gestione degli attributi non geometrici e l’area di copertura
+zip -qr /tmp/$NAME/features.zip  infos
+rm -fr /tmp/$NAME/infos
+
+
+# It writes data on couchbase
+# Scrive i dati su couchbase
+/opt/couchbase/bin/tools/cbdocloader -n $NODE_ADDR \
+                                     -u $ADMIN -p $ADMIN_PASSWD \
+                                     -s 100 -b inno \
+                                     /tmp/$NAME/features.zip 
+
+
+echo START TILING 
+
+# It reads the type of geometries 
+# Legge il tipo delle geometrie   
+ 
+VERIFICA=`psql -d $LOCAL_POSTGRES_DB -q -c "SELECT public.geometrytype(geom) FROM $NAME.$NAME LIMIT 1"`
+TYPE=`echo ${VERIFICA} | sed 's/(1 row)//'`;
+TYPE=`echo ${TYPE} | sed 's/geometrytype//'`;
+TYPE=`echo ${TYPE} | sed 's/-*-//'`;
+TYPE=`echo ${TYPE} | sed 's/ //'`;
+if [ "$TYPE" = "POINT" -o "$TYPE" = "MULTIPOINT" ]; then
+   TYPE="POINT";
+else if [ "$TYPE" = "LINESTRING" -o "$TYPE" = "MULTILINESTRING" ]; then
+        TYPE="LINESTRING";
+     else if [ "$TYPE" = "POLYGON" -o "$TYPE" = "MULTIPOLYGON" ]; then
+             TYPE="POLYGON";
+          fi
+     fi
+fi
+
+# For each zoom level
+# Per ogni livello di zoom
+ 
+for ZOOM in 10 11 12 13 14 15 16 17 
+do
+   # It creates the geometry tiles
+   # Crea il tassellamento
+   psql -d $LOCAL_POSTGRES_DB -q -c "SELECT _inno_create_tiles ('$NAME' , $ZOOM); " 
+   
+   # It writes the json documents on disk
+   # Scrive i documenti json su disco
+   mkdir /tmp/$NAME/tile$ZOOM
+   chmod 777  /tmp/$NAME/tile$ZOOM
+   mkdir /tmp/$NAME/tile$ZOOM/docs
+   chmod 777  /tmp/$NAME/tile$ZOOM/docs
+   psql -d $LOCAL_POSTGRES_DB -q -c "SELECT _inno_tile_writer ('$NAME' , '/tmp', $ZOOM); " 
+   date
+   cd /tmp/$NAME
+   
+   # It compresses the json documents 
+   # Comprime i documenti json
+   zip -qr /tmp/$NAME/$NAME$ZOOM.zip tile$ZOOM
+   rm -fr /tmp/$NAME/tile$ZOOM
+
+   # It writes the documents on couchbase
+   # Scrive i documenti su couchbase
+   /opt/couchbase/bin/tools/cbdocloader -n couchbase1.crs4.it:8091 \
+                        -u $ADMIN -p $ADMIN_PASSWD  \
+                        -b inno /tmp/$NAME/$NAME$ZOOM.zip > result$ZOOM.txt
+       date
+       echo TILES LOADED IN ‘inno’ BUCKET ON COUCHBASE FOR ZOOM $ZOOM 
+   fi
+done
+
+echo END TILING  
+
+# It creates the json document with spatial view definition
+# Crea i documenti json con le definizioni delle viste
+
+DOC='{ "_id" : "_design/'$NAME'views", "language": "javascript","spatial": {'
+for ZOOM in 9 10 11 12 13 14 15 16 17
+do
+    DOC=$DOC'"bymacrobbox'$ZOOM'": "function(doc) { if (doc._'$NAME'macro'$ZOOM'bbox_) emit(doc._'$NAME'macro'$ZOOM'bbox_, null); }",'
+done;
+
+DOC=$DOC'"bybbox": "function(doc) { if (doc._'$NAME'bbox_) emit(doc._'$NAME'bbox_, null); }"},'
+
+DOC=$DOC' "views": { '
+DOC=$DOC'"forInfoDelete":  { "map": "function(doc) { if (doc._'$NAME'bbox_) emit(doc._'$NAME'bbox_,null); }"},'
+DOC=$DOC'"forTileDelete":  { "map": "function(doc) { if (doc.id && doc.id.startsWith(\"'$NAME'\")) emit(doc.id, null); }"}}}'
+
+mkdir /tmp/$NAME/infos
+chmod 777 /tmp/$NAME/infos
+mkdir /tmp/$NAME/infos/design_docs
+chmod 777 /tmp/$NAME/infos/design_docs
+echo $DOC > /tmp/$NAME/infos/design_docs/${NAME}views.json
+zip -qr /tmp/$NAME/views.zip infos
+rm -fr /tmp/$NAME/infos
+exit 0
+
+/opt/couchbase/bin/tools/cbdocloader -n $NODE_ADDR \
+                                     -u $ADMIN -p $ADMIN_PASSWD  \
+                                     -b inno /tmp/$NAME/views.zip > /tmp/$NAME/resultView.txt
+
+date
+echo VIEW LOADED IN inno Bucket ON COUCHBASE see /tmp/$NAME/resultView.txt
+
+
+exit 0
