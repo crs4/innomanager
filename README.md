@@ -6,12 +6,11 @@
 
 This repository contains the source code and resources of the **"InnoManager"** Web Portal.
 
-It was developed for the project **INNO** (http://inno.crs4.it/innomanager). 
+It is based on the Entando Platform (http://www.entando.com/) and was developed for the project **INNO** (http://inno.crs4.it/innomanager). 
 
-The web portal permits to access to project information, metadata of the GIS layer
-stored in the INNO database that is a couchbase database (http://www.couchbase.com/).  
-With the portal can be see the tiles of a GIS layer and is possible to add nue Gis 
-data from a Esri shapefile of medium size (less than 100MB).
+The web portal permits to read of the GIS layer stored on the INNO database a Couchbase database (http://www.couchbase.com/).  
+
+With Innomanager is possible to see the tiles of a GIS layer and add new data from Esri shapefiles.
 
 The "resources" folder of this distribution also contains the tool "InnoImportShapeFile" 
 that allows to import data of large size (more than 100MB ) in a Linux environment using 
